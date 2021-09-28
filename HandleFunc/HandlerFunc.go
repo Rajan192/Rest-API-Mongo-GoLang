@@ -5,7 +5,8 @@ import (
 	Userstruct "USER/UserStruct"
 	"context"
 	"encoding/json"
-	"fmt"
+
+	//"fmt"
 	"log"
 	"net/http"
 
@@ -18,27 +19,27 @@ import (
 	// u "User/UserStruct"
 )
 
-func ValidateInput(user *Userstruct.User, w http.ResponseWriter) {
+func ValidateInput(user *Userstruct.User, w http.ResponseWriter, r *http.Request) bool {
 
-	var validateError []string
-	if user.FirstName == "" {
-		validateError = append(validateError, fmt.Errorf("First_Name should not be null ").Error())
+	//var validateError []string
 
-	}
+	err := user.Validate()
 
-	if user.LastName == "" {
-		validateError = append(validateError, fmt.Errorf("LastName should not be null ").Error())
+	// if user.LastName == "" {
+	// 	validateError = append(validateError, fmt.Errorf("LastName should not be null ").Error())
 
-	}
-	if len(validateError) > 0 {
-		w.Header().Add("Content-Type", "application/json")
+	// }
+	if err != nil {
+		//fmt.Errorf("EROOR %v: ",err)
+        http.Error(w,"error in validaton %s",http.StatusBadRequest)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(&validateError)
-		return
+		json.NewEncoder(w).Encode(&user)
+		return false
 	}
+	json.NewEncoder(w).Encode(&user)
+	return true
+
 }
-
-
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 
@@ -48,7 +49,9 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&oneUser)
 
 	//for validation
-	ValidateInput(&oneUser, w)
+	if ValidateInput(&oneUser, w, r) {
+		return
+	}
 
 	collection := db.ConnectDB()
 	//oneUser.Active = true
@@ -62,12 +65,6 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(result)
 }
-
-
-
-
-
-
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -101,12 +98,6 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(allUser)
 }
-
-
-
-
-
-
 
 //get user by id
 
@@ -175,11 +166,6 @@ func GetUserByID(w http.ResponseWriter, r *http.Request) {
 // 	json.NewEncoder(w).Encode(user1)
 // }
 
-
-
-
-
-
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	// Set header
 	w.Header().Set("Content-Type", "application/json")
@@ -190,8 +176,8 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	// string to primitve.ObjectID
 	id, err := primitive.ObjectIDFromHex(params["id"])
-    if err!=nil{
-		log.Fatal("error in ObjectIDFromHex(params) ",err)
+	if err != nil {
+		log.Fatal("error in ObjectIDFromHex(params) ", err)
 	}
 
 	collection := db.ConnectDB()
